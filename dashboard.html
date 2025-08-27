@@ -20,7 +20,7 @@
     <script type="text/babel">
       const { useState, useEffect, useRef } = React;
 
-      function TaskCard({ task, onUpdate, updating }) {
+  function TaskCard({ task, onUpdate, updating, disabled }) {
         const [showDetails, setShowDetails] = useState(false);
         return (
           <div className="col-12 col-md-6 col-lg-4 mb-3">
@@ -31,7 +31,7 @@
                     <span className="me-2" style={{ fontSize: '1.5rem' }}>{taskIcons[task.id] || '🎯'}</span>
                     <h6 className="card-title mb-0">{task.name}</h6>
                   </div>
-                  <button className={`btn btn-sm ${task.completed ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => onUpdate(task.id, !task.completed)} disabled={updating}>
+                  <button className={`btn btn-sm ${task.completed ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => { if (!disabled) onUpdate(task.id, !task.completed); }} disabled={updating || disabled}>
                     {updating ? (<span className="spinner-border spinner-border-sm" />) : task.completed ? '✓' : '○'}
                   </button>
                 </div>
@@ -89,6 +89,50 @@
         return <canvas ref={ref} height="120"></canvas>;
       }
 
+      function DsaLineChart({ problems }) {
+        const ref = useRef(null);
+        useEffect(() => {
+          if (!ref.current) return; const ctx = ref.current.getContext('2d');
+          const labels = problems.map(p => p.name);
+          const values = problems.map(p => p.difficulty);
+          const chart = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Difficulty (1-10)', data: values, borderColor: '#0d6efd', backgroundColor: 'rgba(13,110,253,0.1)', tension: 0.2 }] }, options: { responsive: true, scales: { y: { beginAtZero: true, min: 0, max: 10 } } } });
+          return () => chart.destroy();
+        }, [problems]);
+        return <canvas ref={ref} height="140"></canvas>;
+      }
+
+      function StreaksPanel({ tasks, onUpdate, disabled }) {
+        const grouped = tasks.reduce((acc, t) => { const cat = t.type || 'other'; acc[cat] = acc[cat] || []; acc[cat].push(t); return acc; }, {});
+        return (
+          <div className="card">
+            <div className="card-header"><h6 className="mb-0">🔥 Streaks by Category</h6></div>
+            <div className="card-body">
+              {Object.keys(grouped).map(cat => (
+                <div key={cat} className="mb-3">
+                  <h6 className="mb-2 text-capitalize">{cat}</h6>
+                  <div className="row">
+                    {grouped[cat].map(t => (
+                      <div key={t.id} className="col-12 mb-2">
+                        <div className="d-flex justify-content-between align-items-center">
+                          <div>
+                            <strong>{t.name}</strong>
+                            <div className="small text-muted">Current: {t.currentStreak} · Best: {t.bestStreak}</div>
+                          </div>
+                          <div>
+                            <button className="btn btn-sm btn-outline-primary me-2" onClick={() => !disabled && onUpdate(t.id, true)} disabled={disabled}>Mark</button>
+                            <button className="btn btn-sm btn-outline-secondary" onClick={() => !disabled && onUpdate(t.id, false)} disabled={disabled}>Unmark</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
       function DashboardApp() {
         const [data, setData] = useState(null);
         const [loading, setLoading] = useState(true);
@@ -103,8 +147,29 @@
             const resp = await fetch('/api/dashboard', { credentials: 'include' });
             if (!resp.ok) throw new Error('Not authenticated');
             const json = await resp.json(); setData(json);
-          } catch (err) { setError(err.message || 'Failed'); }
-          finally { setLoading(false); }
+          } catch (err) {
+            // fallback to demo data so dashboard is visible without auth
+            console.warn('Falling back to demo dashboard:', err.message);
+            const demo = {
+              isDemo: true,
+              user: { name: 'Demo User' },
+              tasks: [
+                { id: 'github', type: 'career', name: 'GitHub Commits', completed: true, currentStreak: 3, bestStreak: 5, totalDays: 10, notes: '' },
+                { id: 'running', type: 'personal', name: 'Running', completed: false, currentStreak: 0, bestStreak: 4, totalDays: 20, notes: '' },
+                { id: 'productivity', type: 'personal', name: 'Daily Productivity Rating', completed: false, currentStreak: 1, bestStreak: 8, totalDays: 40, notes: '' }
+              ],
+              stats: { totalTasks: 3, completedToday: 1, completionRate: 33, totalCurrentStreaks: 4, avgProductivity: 7.5 },
+              dsaProblems: [
+                { id: 'p1', name: 'Two Sum', difficulty: 2 },
+                { id: 'p2', name: 'Binary Tree Inorder', difficulty: 4 },
+                { id: 'p3', name: 'LRU Cache', difficulty: 7 },
+                { id: 'p4', name: 'Dijkstra', difficulty: 8 },
+                { id: 'p5', name: 'Convex Hull', difficulty: 9 }
+              ],
+              chartData: (() => { const last = []; const base = new Date(); for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(base.getDate() - i); last.push({ date: d.toISOString().split('T')[0], percentage: Math.round(Math.random() * 100) }); } return last; })()
+            };
+            setData(demo);
+          } finally { setLoading(false); }
         }
 
         async function updateTask(taskId, completed) {
@@ -117,16 +182,17 @@
           setUpdating(prev => ({ ...prev, [taskId]: false }));
         }
 
-        if (loading) return (<div className="container py-4"><div className="d-flex justify-content-center"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div></div>);
-        if (error) return (<div className="container py-4"><div className="alert alert-danger">{error} <button className="btn btn-sm btn-outline-danger ms-2" onClick={load}>Retry</button></div></div>);
-        if (!data) return null;
+  if (loading) return (<div className="container py-4"><div className="d-flex justify-content-center"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div></div>);
+  if (error) console.warn('Dashboard load error:', error);
+  if (!data) return null;
 
         // Sample DSA difficulty dataset (replace with real API if available)
         const dsaDataset = [ { label: 'Easy', value: 120 }, { label: 'Medium', value: 78 }, { label: 'Hard', value: 24 }, { label: 'Nightmare', value: 6 } ];
 
-        return (
+    return (
           <div className="container-fluid py-4">
             <div className="container">
+      {data.isDemo && (<div className="alert alert-info text-center">You are viewing a demo dashboard (no authentication)</div>)}
               <div className="row mb-4">
                 <div className="col-8">
                   <h2 className="fw-bold">Welcome back, {data.user.name} 👋</h2>
@@ -142,14 +208,17 @@
                 <div className="col-6 col-md-3 mb-3"><div className="card bg-warning text-white"><div className="card-body text-center"><h4 className="fw-bold">{data.stats.avgProductivity || 'N/A'}</h4><small>Avg Productivity</small></div></div></div>
               </div>
 
-              <div className="row mb-4">
-                <div className="col-lg-8 mb-3"><div className="card"><div className="card-header"><h6 className="mb-0">📊 7-day Progress</h6></div><div className="card-body"><ProgressChart data={data.chartData} /></div></div></div>
-                <div className="col-lg-4 mb-3"><div className="card"><div className="card-header"><h6 className="mb-0">🧠 DSA Difficulty</h6></div><div className="card-body"><DsaDifficultyChart dataset={dsaDataset} /></div></div></div>
-              </div>
+                  <div className="row mb-4">
+                    <div className="col-lg-7 mb-3"><div className="card"><div className="card-header"><h6 className="mb-0">📊 7-day Progress</h6></div><div className="card-body"><ProgressChart data={data.chartData} /></div></div></div>
+                    <div className="col-lg-5 mb-3">
+                      <div className="card mb-3"><div className="card-header"><h6 className="mb-0">🧠 DSA Difficulty (problems)</h6></div><div className="card-body"><DsaLineChart problems={data.dsaProblems || []} /></div></div>
+                      <div className="card"><div className="card-header"><h6 className="mb-0">📈 Streak Maintainers</h6></div><div className="card-body"><StreaksPanel tasks={data.tasks} onUpdate={updateTask} disabled={data.isDemo} /></div></div>
+                    </div>
+                  </div>
 
               <div className="row mb-4">
                 <div className="col-12"><h4 className="fw-bold mb-3">🗂 Today's Tasks</h4></div>
-                {data.tasks.map(task => <TaskCard key={task.id} task={task} onUpdate={updateTask} updating={updating[task.id]} />)}
+                {data.tasks.map(task => <TaskCard key={task.id} task={task} onUpdate={updateTask} updating={updating[task.id]} disabled={data.isDemo} />)}
               </div>
 
               <div className="row"><div className="col-12"><div className="card bg-light"><div className="card-body text-center"><h5 className="text-primary">Consistency is key — keep building your streaks!</h5></div></div></div></div>
