@@ -1,58 +1,165 @@
 <!doctype html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Dashboard - Counter Max</title>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="p-4">
-  <div class="container">
-    <div class="d-flex justify-content-between align-items-center">
-      <h3 id="welcome">Dashboard</h3>
-      <div>
-        <button id="logout" class="btn btn-outline-secondary">Logout</button>
-      </div>
-    </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Dashboard - Counter Max</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>body { background: #f8f9fa; }</style>
+  </head>
+  <body>
+    <div id="root"></div>
 
-    <div id="content" class="mt-4">Loading...</div>
-  </div>
+    <!-- React + Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <script>
-    async function fetchJSON(url) {
-      const resp = await fetch(url, { credentials: 'include' });
-      if (!resp.ok) throw new Error('fetch failed');
-      return resp.json();
-    }
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
 
-    async function load() {
-      try {
-        const data = await fetchJSON('/api/dashboard');
-        document.getElementById('welcome').innerText = `Welcome, ${data.user.name}`;
+      function TaskCard({ task, onUpdate, updating }) {
+        const [showDetails, setShowDetails] = useState(false);
+        return (
+          <div className="col-12 col-md-6 col-lg-4 mb-3">
+            <div className={`card h-100 shadow-sm ${task.completed ? 'border-success' : 'border-light'}`}>
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-start mb-2">
+                  <div className="d-flex align-items-center">
+                    <span className="me-2" style={{ fontSize: '1.5rem' }}>{taskIcons[task.id] || '🎯'}</span>
+                    <h6 className="card-title mb-0">{task.name}</h6>
+                  </div>
+                  <button className={`btn btn-sm ${task.completed ? 'btn-success' : 'btn-outline-secondary'}`} onClick={() => onUpdate(task.id, !task.completed)} disabled={updating}>
+                    {updating ? (<span className="spinner-border spinner-border-sm" />) : task.completed ? '✓' : '○'}
+                  </button>
+                </div>
 
-        const container = document.getElementById('content');
-        if (!data.tasks || data.tasks.length === 0) {
-          container.innerHTML = '<div class="alert alert-info">No tasks selected yet. Please set up tasks.</div>';
-          return;
+                <div className="row text-center mb-2">
+                  <div className="col-4"><div className="small text-muted">Current</div><div className="fw-bold text-primary">{task.currentStreak}</div></div>
+                  <div className="col-4"><div className="small text-muted">Best</div><div className="fw-bold text-success">{task.bestStreak}</div></div>
+                  <div className="col-4"><div className="small text-muted">Total</div><div className="fw-bold text-info">{task.totalDays}</div></div>
+                </div>
+
+                <button className="btn btn-sm btn-outline-info w-100" onClick={() => setShowDetails(!showDetails)}>{showDetails ? 'Hide Details' : 'Show Details'}</button>
+
+                {showDetails && (
+                  <div className="mt-2">
+                    <textarea className="form-control form-control-sm" placeholder="Add notes..." defaultValue={task.notes} />
+                  </div>
+                )}
+
+                {task.completed && <div className="mt-2"><span className="badge bg-success">✓ Completed Today</span></div>}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const taskIcons = {
+        github: '💻', leetcode: '🧩', gfg: '📚', chess: '♟️', detox: '🧘', screentime: '📱', running: '🏃', gym: '💪', yoga: '🧘‍♀️', swimming: '🏊', productivity: '⭐'
+      };
+
+      function ProgressChart({ data }) {
+        const canvasRef = useRef(null);
+        useEffect(() => {
+          if (!canvasRef.current || !data) return;
+          const ctx = canvasRef.current.getContext('2d');
+          const labels = data.slice(-7).map(d => new Date(d.date).toLocaleDateString('en-US', { weekday: 'short' }));
+          const values = data.slice(-7).map(d => d.percentage);
+          const chart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets: [{ label: 'Completion %', data: values, backgroundColor: '#0d6efd' }] },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100 } } }
+          });
+          return () => chart.destroy();
+        }, [data]);
+        return <canvas ref={canvasRef} height="120"></canvas>;
+      }
+
+      function DsaDifficultyChart({ dataset }) {
+        const ref = useRef(null);
+        useEffect(() => {
+          if (!ref.current) return; const ctx = ref.current.getContext('2d');
+          const labels = dataset.map(d => d.label); const values = dataset.map(d => d.value);
+          const chart = new Chart(ctx, { type: 'bar', data: { labels, datasets: [{ label: 'Problems', data: values, backgroundColor: ['#198754','#0dcaf0','#ffc107','#dc3545'] }] }, options: { responsive: true } });
+          return () => chart.destroy();
+        }, [dataset]);
+        return <canvas ref={ref} height="120"></canvas>;
+      }
+
+      function DashboardApp() {
+        const [data, setData] = useState(null);
+        const [loading, setLoading] = useState(true);
+        const [error, setError] = useState('');
+        const [updating, setUpdating] = useState({});
+
+        useEffect(() => { load(); }, []);
+
+        async function load() {
+          try {
+            setLoading(true);
+            const resp = await fetch('/api/dashboard', { credentials: 'include' });
+            if (!resp.ok) throw new Error('Not authenticated');
+            const json = await resp.json(); setData(json);
+          } catch (err) { setError(err.message || 'Failed'); }
+          finally { setLoading(false); }
         }
 
-        let html = '<div class="row">';
-        data.tasks.forEach(t => {
-          html += `<div class="col-12 col-md-6 col-lg-4 mb-3"><div class="card p-3"><h5>${t.name}</h5><p>Completed today: ${t.completed ? 'Yes' : 'No'}</p><p>Current streak: ${t.currentStreak}</p></div></div>`;
-        });
-        html += '</div>';
-        container.innerHTML = html;
-      } catch (err) {
-        document.getElementById('content').innerHTML = '<div class="alert alert-danger">Not authenticated or failed to load dashboard. Please login.</div>';
+        async function updateTask(taskId, completed) {
+          setUpdating(prev => ({ ...prev, [taskId]: true }));
+          try {
+            const resp = await fetch(`/api/tasks/${taskId}/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ completed }) });
+            if (!resp.ok) throw new Error('Failed');
+            await load();
+          } catch (err) { console.error(err); }
+          setUpdating(prev => ({ ...prev, [taskId]: false }));
+        }
+
+        if (loading) return (<div className="container py-4"><div className="d-flex justify-content-center"><div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div></div></div>);
+        if (error) return (<div className="container py-4"><div className="alert alert-danger">{error} <button className="btn btn-sm btn-outline-danger ms-2" onClick={load}>Retry</button></div></div>);
+        if (!data) return null;
+
+        // Sample DSA difficulty dataset (replace with real API if available)
+        const dsaDataset = [ { label: 'Easy', value: 120 }, { label: 'Medium', value: 78 }, { label: 'Hard', value: 24 }, { label: 'Nightmare', value: 6 } ];
+
+        return (
+          <div className="container-fluid py-4">
+            <div className="container">
+              <div className="row mb-4">
+                <div className="col-8">
+                  <h2 className="fw-bold">Welcome back, {data.user.name} 👋</h2>
+                  <p className="text-muted">{new Date().toLocaleDateString()}</p>
+                </div>
+                <div className="col-4 text-end"><button className="btn btn-outline-secondary" onClick={async () => { await fetch('/api/logout', { method: 'POST', credentials: 'include' }); window.location.href = '/userRegistration1.html'; }}>Logout</button></div>
+              </div>
+
+              <div className="row mb-4">
+                <div className="col-6 col-md-3 mb-3"><div className="card bg-primary text-white"><div className="card-body text-center"><h4 className="fw-bold">{data.stats.completedToday}/{data.stats.totalTasks}</h4><small>Completed Today</small></div></div></div>
+                <div className="col-6 col-md-3 mb-3"><div className="card bg-success text-white"><div className="card-body text-center"><h4 className="fw-bold">{data.stats.completionRate}%</h4><small>Completion Rate</small></div></div></div>
+                <div className="col-6 col-md-3 mb-3"><div className="card bg-info text-white"><div className="card-body text-center"><h4 className="fw-bold">{data.stats.totalCurrentStreaks}</h4><small>Total Streaks</small></div></div></div>
+                <div className="col-6 col-md-3 mb-3"><div className="card bg-warning text-white"><div className="card-body text-center"><h4 className="fw-bold">{data.stats.avgProductivity || 'N/A'}</h4><small>Avg Productivity</small></div></div></div>
+              </div>
+
+              <div className="row mb-4">
+                <div className="col-lg-8 mb-3"><div className="card"><div className="card-header"><h6 className="mb-0">📊 7-day Progress</h6></div><div className="card-body"><ProgressChart data={data.chartData} /></div></div></div>
+                <div className="col-lg-4 mb-3"><div className="card"><div className="card-header"><h6 className="mb-0">🧠 DSA Difficulty</h6></div><div className="card-body"><DsaDifficultyChart dataset={dsaDataset} /></div></div></div>
+              </div>
+
+              <div className="row mb-4">
+                <div className="col-12"><h4 className="fw-bold mb-3">🗂 Today's Tasks</h4></div>
+                {data.tasks.map(task => <TaskCard key={task.id} task={task} onUpdate={updateTask} updating={updating[task.id]} />)}
+              </div>
+
+              <div className="row"><div className="col-12"><div className="card bg-light"><div className="card-body text-center"><h5 className="text-primary">Consistency is key — keep building your streaks!</h5></div></div></div></div>
+            </div>
+          </div>
+        );
       }
-    }
 
-    document.getElementById('logout').addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
-      window.location.href = '/userRegistration1.html';
-    });
-
-    load();
-  </script>
-</body>
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<DashboardApp />);
+    </script>
+  </body>
 </html>

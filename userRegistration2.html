@@ -7,72 +7,126 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="p-4">
-  <div class="container">
-    <h3>Select your tasks</h3>
-    <p>This is a simplified task selection page to finish registration.</p>
+  <div id="root"></div>
 
-    <div class="mb-3">
-      <label class="form-label">Career</label>
-      <select id="career" class="form-select" multiple>
-        <option value="github">GitHub Commits</option>
-        <option value="leetcode">LeetCode Problems</option>
-        <option value="gfg">GeeksforGeeks</option>
-        <option value="chess">Chess Games</option>
-      </select>
-    </div>
+  <!-- React, ReactDOM and Babel for in-browser JSX transpile -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <div class="mb-3">
-      <label class="form-label">Personal</label>
-      <select id="personal" class="form-select" multiple>
-        <option value="detox">Digital Detox</option>
-        <option value="running">Running</option>
-        <option value="gym">Gym</option>
-        <option value="yoga">Yoga</option>
-      </select>
-    </div>
+  <script type="text/babel">
+    // ...component adapted from userRegistration2.jsx
+    const { useState } = React;
 
-    <div class="mb-3">
-      <label class="form-label">Custom (comma separated)</label>
-      <input id="custom" class="form-control" placeholder="e.g. meditate, read" />
-    </div>
+    function StreakTaskSelector() {
+      const [selectedTasks, setSelectedTasks] = useState({ career: [], personal: [], custom: [] });
+      const [customTask, setCustomTask] = useState('');
+      const [showCustomInput, setShowCustomInput] = useState(false);
 
-    <div>
-      <button id="saveBtn" class="btn btn-primary">Save and Continue</button>
-    </div>
+      const careerGoals = [
+        { id: 'github', name: 'GitHub Commits', icon: '💻' },
+        { id: 'leetcode', name: 'LeetCode Problems', icon: '🧩' },
+        { id: 'gfg', name: 'GeeksforGeeks Practice', icon: '📚' },
+        { id: 'chess', name: 'Chess Games', icon: '♟️' }
+      ];
 
-    <div id="msg" class="mt-3"></div>
-  </div>
+      const personalGoals = [
+        { id: 'detox', name: 'Digital Detox', icon: '🧘' },
+        { id: 'screentime', name: 'Screen Time Limit', icon: '📱' },
+        { id: 'running', name: 'Running', icon: '🏃‍♂️' },
+        { id: 'gym', name: 'Gym Workout', icon: '💪' },
+        { id: 'yoga', name: 'Yoga Practice', icon: '🧘‍♀️' },
+        { id: 'swimming', name: 'Swimming', icon: '🏊‍♂️' },
+        { id: 'productivity', name: 'Daily Productivity Rating', icon: '⭐' }
+      ];
 
-  <script>
-    async function postJSON(url, body) {
-      const resp = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(body)
-      });
-      return resp.json();
+      const handleTaskSelection = (category, taskId) => {
+        setSelectedTasks(prev => {
+          const categoryTasks = prev[category];
+          const isSelected = categoryTasks.includes(taskId);
+          return { ...prev, [category]: isSelected ? categoryTasks.filter(id => id !== taskId) : [...categoryTasks, taskId] };
+        });
+      };
+
+      const addCustomTask = () => {
+        if (customTask.trim() && !selectedTasks.custom.includes(customTask.trim())) {
+          setSelectedTasks(prev => ({ ...prev, custom: [...prev.custom, customTask.trim()] }));
+          setCustomTask(''); setShowCustomInput(false);
+        }
+      };
+
+      const removeCustomTask = (taskToRemove) => setSelectedTasks(prev => ({ ...prev, custom: prev.custom.filter(t => t !== taskToRemove) }));
+
+      const handleContinue = async () => {
+        const totalSelected = selectedTasks.career.length + selectedTasks.personal.length + selectedTasks.custom.length;
+        if (totalSelected === 0) { alert('Please select at least one task to continue.'); return; }
+
+        // POST to server endpoint (keeps existing workflow). If you prefer Supabase client, set SUPABASE_URL and SUPABASE_ANON_KEY globals and adapt here.
+        try {
+          const resp = await fetch('/api/tasks/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ selectedTasks }) });
+          const json = await resp.json();
+          if (resp.ok && json.redirect) {
+            window.location.href = json.redirect;
+            return;
+          }
+        } catch (err) {
+          console.error('save failed', err);
+        }
+        // fallback redirect
+        window.location.href = '/dashboard.html';
+      };
+
+      const TaskCard = ({ task, category, isSelected, onToggle }) => (
+        <div className="col-12 col-sm-6 col-lg-4 mb-3">
+          <div className={`card h-100 task-card ${isSelected ? 'border-primary bg-light' : ''}`} style={{ cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => onToggle(category, task.id)}>
+            <div className="card-body text-center d-flex flex-column justify-content-center">
+              <div style={{ fontSize: '2rem' }} className="mb-2">{task.icon}</div>
+              <h6 className="card-title mb-0">{task.name}</h6>
+              {isSelected && (<div className="mt-2"><span className="badge bg-primary">✓ Selected</span></div>)}
+            </div>
+          </div>
+        </div>
+      );
+
+      return (
+        <div className="container-fluid py-4" style={{ backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+          <div className="container">
+            <div className="row justify-content-center">
+              <div className="col-12 col-lg-10">
+                <div className="text-center mb-4">
+                  <h2 className="fw-bold text-dark mb-2">🎯 Choose Your Streak Goals</h2>
+                  <p className="text-muted">Select the activities you want to track daily. Building consistent habits starts here!</p>
+                </div>
+
+                <div className="card mb-4 shadow-sm">
+                  <div className="card-header bg-primary text-white"><h5 className="mb-0">💼 Career Goals</h5><small>Boost your professional development</small></div>
+                  <div className="card-body"><div className="row">{careerGoals.map(task => <TaskCard key={task.id} task={task} category="career" isSelected={selectedTasks.career.includes(task.id)} onToggle={handleTaskSelection} />)}</div></div>
+                </div>
+
+                <div className="card mb-4 shadow-sm">
+                  <div className="card-header bg-success text-white"><h5 className="mb-0">🌱 Personal Goals</h5><small>Focus on health and well-being</small></div>
+                  <div className="card-body"><div className="row">{personalGoals.map(task => <TaskCard key={task.id} task={task} category="personal" isSelected={selectedTasks.personal.includes(task.id)} onToggle={handleTaskSelection} />)}</div></div>
+                </div>
+
+                <div className="card mb-4 shadow-sm">
+                  <div className="card-header bg-info text-white"><h5 className="mb-0">✨ Custom Goals</h5><small>Add your own unique activities</small></div>
+                  <div className="card-body">
+                    {selectedTasks.custom.length > 0 && (<div className="row mb-3">{selectedTasks.custom.map((task, index) => (<div key={index} className="col-12 col-sm-6 col-lg-4 mb-2"><div className="card border-info bg-light"><div className="card-body py-2 d-flex justify-content-between align-items-center"><span className="text-truncate me-2">🎯 {task}</span><button className="btn btn-sm btn-outline-danger" onClick={() => removeCustomTask(task)}>×</button></div></div></div>))}</div>)}
+                    {showCustomInput ? (<div className="row"><div className="col-12"><div className="input-group"><input type="text" className="form-control" placeholder="Enter your custom goal..." value={customTask} onChange={(e) => setCustomTask(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addCustomTask()} maxLength={50} /><button className="btn btn-info" onClick={addCustomTask}>Add</button><button className="btn btn-outline-secondary" onClick={() => { setShowCustomInput(false); setCustomTask(''); }}>Cancel</button></div><small className="text-muted">Max 50 characters</small></div></div>) : (<button className="btn btn-outline-info w-100" onClick={() => setShowCustomInput(true)}>+ Add Custom Goal</button>)}
+                  </div>
+                </div>
+
+                <div className="card shadow-sm"><div className="card-body text-center"><h6 className="mb-3">Selected Goals: {selectedTasks.career.length + selectedTasks.personal.length + selectedTasks.custom.length}</h6>{(selectedTasks.career.length + selectedTasks.personal.length + selectedTasks.custom.length) > 0 && (<div className="mb-3"><small className="text-muted">💡 Tip: Start with 2-3 goals to build sustainable habits, then add more as you progress!</small></div>)}<button className="btn btn-primary btn-lg px-5" onClick={handleContinue} disabled={selectedTasks.career.length + selectedTasks.personal.length + selectedTasks.custom.length === 0}>Continue to Dashboard 🚀</button></div></div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      );
     }
 
-    document.getElementById('saveBtn').addEventListener('click', async () => {
-      const career = Array.from(document.getElementById('career').selectedOptions).map(o => o.value);
-      const personal = Array.from(document.getElementById('personal').selectedOptions).map(o => o.value);
-      const custom = (document.getElementById('custom').value || '').split(',').map(s => s.trim()).filter(Boolean);
-
-      const payload = { selectedTasks: { career, personal, custom } };
-      document.getElementById('msg').innerText = 'Saving...';
-      try {
-        const res = await postJSON('/api/tasks/save', payload);
-        if (res && res.redirect) {
-          window.location.href = res.redirect;
-        } else {
-          document.getElementById('msg').innerText = 'Saved — redirecting...';
-          setTimeout(() => window.location.href = '/dashboard.html', 800);
-        }
-      } catch (err) {
-        document.getElementById('msg').innerText = 'Error saving tasks';
-      }
-    });
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<StreakTaskSelector />);
   </script>
 </body>
 </html>
