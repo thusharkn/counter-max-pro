@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FutureTech - Authentication Portal</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- ==================== CSS SECTION ==================== -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+        
+        :root {
+            --primary-glow: #00ff88;
+            --secondary-glow: #0088ff;
+            --accent-purple: #8844ff;
+            --dark-bg: #0a0a0f;
+            --card-bg: rgba(15, 15, 25, 0.9);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0c4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+        
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: 
+                radial-gradient(circle at 20% 20%, var(--primary-glow) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, var(--secondary-glow) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, var(--accent-purple) 0%, transparent 50%),
+                linear-gradient(135deg, var(--dark-bg) 0%, #1a1a2e 100%);
+            animation: bgShift 20s ease-in-out infinite;
+        }
+        
+        @keyframes bgShift {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(2deg); }
+        }
+        
+        /* Floating particles */
+        .particle {
+            position: absolute;
+            background: var(--primary-glow);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
+            50% { transform: translateY(-20px) rotate(180deg); opacity: 0.8; }
+        }
+        
+        /* Main container */
+        .auth-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* Glass card effect */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow), var(--accent-purple), var(--primary-glow));
+            border-radius: 22px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .glass-card:hover::before {
+            opacity: 0.3;
+        }
+        
+        /* Logo */
+        .logo {
+            font-family: 'Orbitron', monospace;
+            font-size: 2.5rem;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 2rem;
+            background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: logoGlow 3s ease-in-out infinite;
+        }
+        
+        @keyframes logoGlow {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+        }
+        
+        /* Form styles */
+        .form-control {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            color: var(--text-primary);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .form-label {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Button styles */
+        .btn-futuristic {
+            background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            border: none;
+            border-radius: 12px;
+            color: var(--dark-bg);
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-futuristic::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .btn-futuristic:hover::before {
+            left: 100%;
+        }
+        
+        .btn-futuristic:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+        
+        .btn-outline-futuristic {
+            background: transparent;
+            border: 2px solid var(--primary-glow);
+            color: var(--primary-glow);
+            border-radius: 12px;
+            font-weight: 600;
+            padding: 0.75rem 2rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-futuristic:hover {
+            background: var(--primary-glow);
+            color: var(--dark-bg);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+        
+        /* Tab styles */
+        .nav-tabs {
+            border: none;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        
+        .nav-tabs .nav-link {
+            background: transparent;
+            border: 2px solid var(--glass-border);
+            color: var(--text-secondary);
+            border-radius: 12px 12px 0 0;
+            margin: 0 0.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            color: var(--dark-bg);
+            border-color: transparent;
+            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        .nav-tabs .nav-link:hover {
+            border-color: var(--primary-glow);
+            color: var(--primary-glow);
+        }
+        
+        /* Social buttons */
+        .social-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            border-radius: 12px;
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+            flex: 1;
+            margin: 0 0.25rem;
+        }
+        
+        .social-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--primary-glow);
+            border-color: var(--primary-glow);
+        }
+        
+        /* Divider */
+        .divider {
+            position: relative;
+            text-align: center;
+            margin: 1.5rem 0;
+            color: var(--text-secondary);
+        }
+        
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-border), transparent);
+        }
+        
+        .divider span {
+            background: var(--card-bg);
+            padding: 0 1rem;
+        }
+        
+        /* Loading animation */
+        .loading {
+            display: none;
+        }
+        
+        .loading.show {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid currentColor;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .glass-card {
+                margin: 1rem;
+            }
+            
+            .nav-tabs .nav-link {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+        
+        /* Success message */
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid var(--primary-glow);
+            color: var(--primary-glow);
+            border-radius: 12px;
+        }
+        
+        .alert-danger {
+            background: rgba(255, 64, 64, 0.1);
+            border: 1px solid #ff4040;
+            color: #ff4040;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-animation"></div>
+    
+    <!-- Floating Particles -->
+    <div id="particles"></div>
+    
+    <!-- ==================== HTML SECTION ==================== -->
+    <div class="auth-container">
+        <div class="glass-card">
+            <div class="card-body p-4 p-md-5">
+                <!-- Logo -->
+                <div class="logo">
+                    <i class="fas fa-atom"></i> FutureTech
+                </div>
+                
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" id="authTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="login-tab" data-bs-toggle="tab" data-bs-target="#login" type="button" role="tab">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="register-tab" data-bs-toggle="tab" data-bs-target="#register" type="button" role="tab">
+                            <i class="fas fa-user-plus me-2"></i>Register
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- Tab Content -->
+                <div class="tab-content" id="authTabContent">
+                    <!-- Login Form -->
+                    <div class="tab-pane fade show active" id="login" role="tabpanel">
+                        <form id="loginForm">
+                            <div class="mb-3">
+                                <label for="loginEmail" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email Address
+                                </label>
+                                <input type="email" class="form-control" id="loginEmail" placeholder="Enter your email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="loginPassword" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Password
+                                </label>
+                                <input type="password" class="form-control" id="loginPassword" placeholder="Enter your password" required>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="rememberMe">
+                                <label class="form-check-label" for="rememberMe">
+                                    Remember me
+                                </label>
+                            </div>
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-futuristic">
+                                    <span class="btn-text">Access System</span>
+                                    <span class="loading"></span>
+                                </button>
+                            </div>
+                            <div class="text-center">
+                                <a href="#" class="text-decoration-none" style="color: var(--primary-glow);">
+                                    Forgot Password?
+                                </a>
+                            </div>
+                        </form>
+                        
+                        <div class="divider">
+                            <span>or continue with</span>
+                        </div>
+                        
+                        <!-- Social Login -->
+                        <div class="d-flex gap-2">
+                            <button class="social-btn">
+                                <i class="fab fa-google"></i>
+                            </button>
+                            <button class="social-btn">
+                                <i class="fab fa-facebook-f"></i>
+                            </button>
+                            <button class="social-btn">
+                                <i class="fab fa-twitter"></i>
+                            </button>
+                            <button class="social-btn">
+                                <i class="fab fa-github"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Register Form -->
+                    <div class="tab-pane fade" id="register" role="tabpanel">
+                        <form id="registerForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="firstName" class="form-label">
+                                        <i class="fas fa-user me-2"></i>First Name
+                                    </label>
+                                    <input type="text" class="form-control" id="firstName" placeholder="First name" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="lastName" class="form-label">
+                                        <i class="fas fa-user me-2"></i>Last Name
+                                    </label>
+                                    <input type="text" class="form-control" id="lastName" placeholder="Last name" required>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="registerEmail" class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email Address
+                                </label>
+                                <input type="email" class="form-control" id="registerEmail" placeholder="Enter your email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="phoneNumber" class="form-label">
+                                    <i class="fas fa-phone me-2"></i>Phone Number
+                                </label>
+                                <input type="tel" inputmode="tel" pattern="\+?[0-9\s\-()]{7,20}" class="form-control" id="phoneNumber" placeholder="e.g. +1 (555) 555-0123" required>
+                                <div class="form-text" style="color: var(--text-secondary);">We'll use this to verify your account if needed.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="registerPassword" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Password
+                                </label>
+                                <input type="password" class="form-control" id="registerPassword" placeholder="Create a password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirmPassword" class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Confirm Password
+                                </label>
+                                <input type="password" class="form-control" id="confirmPassword" placeholder="Confirm your password" required>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="acceptTerms" required>
+                                <label class="form-check-label" for="acceptTerms">
+                                    I agree to the <a href="#" style="color: var(--primary-glow);">Terms & Conditions</a>
+                                </label>
+                            </div>
+                            <div class="d-grid mb-3">
+                                <button type="submit" class="btn btn-futuristic">
+                                    <span class="btn-text">Initialize Account</span>
+                                    <span class="loading"></span>
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="divider">
+                            <span>or register with</span>
+                        </div>
+                        
+                        <!-- Social Register -->
+                        <div class="d-flex gap-2">
+                            <button class="social-btn">
+                                <i class="fab fa-google"></i>
+                            </button>
+                            <button class="social-btn">
+                                <i class="fab fa-facebook-f"></i>
+                            </button>
+                            <button class="social-btn">
+                                <i class="fab fa-twitter"></i>
+                            </button>
+                            <button class="social-btn">
+                                <i class="fab fa-github"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alert Messages -->
+                <div id="alertContainer" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- ==================== JAVASCRIPT SECTION ==================== -->
+    <script>
+        // Particle system
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            const particleCount = 50;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                // Random size
+                const size = Math.random() * 4 + 1;
+                particle.style.width = size + 'px';
+                particle.style.height = size + 'px';
+                
+                // Random position
+                particle.style.left = Math.random() * 100 + '%';
+                particle.style.top = Math.random() * 100 + '%';
+                
+                // Random animation delay
+                particle.style.animationDelay = Math.random() * 6 + 's';
+                
+                // Random opacity
+                particle.style.opacity = Math.random() * 0.5 + 0.1;
+                
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        // Form validation
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        function validatePassword(password) {
+            return password.length >= 8;
+        }
+
+        function validatePhone(phone) {
+            // Basic international phone validation: allows +, numbers, spaces, dashes, and parentheses
+            const phoneRegex = /^\+?[0-9\s\-()]{7,20}$/;
+            return phoneRegex.test(phone.trim());
+        }
+        
+        function showAlert(message, type = 'success') {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+        
+        function setLoading(form, isLoading) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const btnText = submitBtn.querySelector('.btn-text');
+            const loading = submitBtn.querySelector('.loading');
+            
+            if (isLoading) {
+                btnText.style.opacity = '0.7';
+                loading.classList.add('show');
+                submitBtn.disabled = true;
+            } else {
+                btnText.style.opacity = '1';
+                loading.classList.remove('show');
+                submitBtn.disabled = false;
+            }
+        }
+        
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            // Validation
+            if (!validateEmail(email)) {
+                showAlert('Please enter a valid email address.', 'danger');
+                return;
+            }
+            
+            if (!validatePassword(password)) {
+                showAlert('Password must be at least 8 characters long.', 'danger');
+                return;
+            }
+            
+            // Show loading
+            setLoading(this, true);
+            
+            // Call backend login
+            try {
+                const resp = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+
+                const json = await resp.json();
+                if (!resp.ok) {
+                    showAlert(json.error || 'Login failed', 'danger');
+                    return;
+                }
+
+                showAlert('Login successful! Redirecting...', 'success');
+                setTimeout(() => {
+                    window.location.href = json.redirect || '/dashboard.html';
+                }, 800);
+            } catch (error) {
+                showAlert('Login failed. Please check your credentials.', 'danger');
+            } finally {
+                setLoading(this, false);
+            }
+        });
+        
+        // Register form handler
+        document.getElementById('registerForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            const email = document.getElementById('registerEmail').value;
+            const phone = document.getElementById('phoneNumber').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const acceptTerms = document.getElementById('acceptTerms').checked;
+            
+            // Validation
+            if (!firstName || !lastName) {
+                showAlert('Please enter your first and last name.', 'danger');
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showAlert('Please enter a valid email address.', 'danger');
+                return;
+            }
+
+            if (!phone || !validatePhone(phone)) {
+                showAlert('Please enter a valid phone number (e.g. +1 (555) 555-0123).', 'danger');
+                return;
+            }
+            
+            if (!validatePassword(password)) {
+                showAlert('Password must be at least 8 characters long.', 'danger');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showAlert('Passwords do not match.', 'danger');
+                return;
+            }
+            
+            if (!acceptTerms) {
+                showAlert('Please accept the Terms & Conditions.', 'danger');
+                return;
+            }
+            
+            // Show loading
+            setLoading(this, true);
+            
+                // Call backend register
+                try {
+                    const payload = { firstName, lastName, email, phone, password };
+                    const resp = await fetch('/api/register', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(payload)
+                    });
+                    const json = await resp.json();
+                    if (!resp.ok) {
+                        showAlert(json.error || 'Registration failed', 'danger');
+                        return;
+                    }
+
+                    showAlert('Registration successful! Redirecting...', 'success');
+                    // redirect to task selection page where user finishes registration
+                    setTimeout(() => {
+                        window.location.href = json.redirect || '/userRegistration2.html';
+                    }, 800);
+                } catch (error) {
+                    showAlert('Registration failed. Please try again.', 'danger');
+                } finally {
+                    setLoading(this, false);
+                }
+        });
+        
+        // Social login handlers
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const platform = this.querySelector('i').classList[1].split('-')[1];
+                showAlert(`${platform.charAt(0).toUpperCase() + platform.slice(1)} authentication coming soon!`, 'success');
+            });
+        });
+        
+        // Password strength indicator (optional enhancement)
+        document.getElementById('registerPassword')?.addEventListener('input', function() {
+            const password = this.value;
+            let strength = 0;
+            
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            // You could add a visual strength indicator here
+        });
+        
+        // Enhanced form interactions
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.parentNode.style.transform = 'translateY(-2px)';
+                this.parentNode.style.transition = 'transform 0.3s ease';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentNode.style.transform = 'translateY(0)';
+            });
+        });
+        
+        // Tab switching enhancement
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                // Clear any existing alerts when switching tabs
+                document.getElementById('alertContainer').innerHTML = '';
+                
+                // Add some visual feedback
+                const targetPane = document.querySelector(this.getAttribute('data-bs-target'));
+                targetPane.style.opacity = '0';
+                targetPane.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    targetPane.style.transition = 'all 0.3s ease';
+                    targetPane.style.opacity = '1';
+                    targetPane.style.transform = 'translateY(0)';
+                }, 50);
+            });
+        });
+        
+        // Initialize particles on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            createParticles();
+            
+            // Add some entrance animation
+            document.querySelector('.glass-card').style.opacity = '0';
+            document.querySelector('.glass-card').style.transform = 'translateY(50px)';
+            
+            setTimeout(() => {
+                document.querySelector('.glass-card').style.transition = 'all 0.8s ease';
+                document.querySelector('.glass-card').style.opacity = '1';
+                document.querySelector('.glass-card').style.transform = 'translateY(0)';
+            }, 100);
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Alt + L for login tab
+            if (e.altKey && e.key.toLowerCase() === 'l') {
+                e.preventDefault();
+                document.getElementById('login-tab').click();
+            }
+            
+            // Alt + R for register tab
+            if (e.altKey && e.key.toLowerCase() === 'r') {
+                e.preventDefault();
+                document.getElementById('register-tab').click();
+            }
+        });
+        
+        // Add some dynamic effects
+        setInterval(() => {
+            const particles = document.querySelectorAll('.particle');
+            particles.forEach(particle => {
+                if (Math.random() > 0.95) {
+                    particle.style.background = `hsl(${Math.random() * 360}, 70%, 60%)`;
+                    setTimeout(() => {
+                        particle.style.background = 'var(--primary-glow)';
+                    }, 1000);
+                }
+            });
+        }, 2000);
+    </script>
+</body>
+</html>
